@@ -1,12 +1,12 @@
-# USDAX Finance — Contracts
+# USDAX Finance: Contracts
 
 Smart contracts for the USDAX Protocol, deployed on [Robinhood Chain](https://robinhood.com/us/en/chain/) (Arbitrum Orbit, chain ID 46630).
 
-USDAX is an overcollateralized stablecoin pegged to $1.00. Users lock crypto collateral, mint USDAX against it, and repay to unlock their assets. No custodian, no credit check — fully on-chain.
+USDAX is an overcollateralized stablecoin pegged to $1.00. Users lock crypto collateral, mint USDAX against it, and repay to unlock their assets. No custodian, no credit check. Fully on-chain..
 
 ---
 
-## Deployed Contracts (Robinhood Chain Testnet — Chain ID 46630)
+## Deployed Contracts (Robinhood Chain Testnet: Chain ID 46630)
 
 | Contract | Address |
 |---|---|
@@ -78,7 +78,7 @@ Core CDP engine. Handles all user-facing vault operations.
 A vault with HF < 1.0 is eligible for liquidation.
 
 ### USDAxToken
-Standard ERC-20 with ERC-20 Permit. Mint and burn are permissioned exclusively to VaultEngine — set once at deployment, immutable thereafter.
+Standard ERC-20 with ERC-20 Permit. Mint and burn are permissioned exclusively to VaultEngine. Set once at deployment, immutable thereafter.
 
 ### CollateralManager
 Stores risk parameters for each whitelisted collateral token. Owner-controlled; can add, update, or disable collateral types.
@@ -87,14 +87,14 @@ Stores risk parameters for each whitelisted collateral token. Owner-controlled; 
 Owner-controlled price feed. Prices expire after 24 hours (staleness check in `getPrice`). Unsafe read available via `getPriceUnsafe` for off-chain tooling.
 
 ### USDAxSavings
-USDAX savings rate module. 4.20% APY funded by a pre-seeded reward pool. Rewards accrue linearly per second from last checkpoint. No lock-up period. `withdraw()` does not auto-claim rewards — call `claimRewards()` separately first.
+USDAX savings rate module. 4.20% APY funded by a pre-seeded reward pool. Rewards accrue linearly per second from last checkpoint. No lock-up period. `withdraw()` does not auto-claim rewards. Call `claimRewards()` separately.
 
 ---
 
 ## Development
 
 ### Requirements
-- [Foundry](https://getfoundry.sh/) — `curl -L https://foundry.paradigm.xyz | bash && foundryup`
+- [Foundry](https://getfoundry.sh/): `curl -L https://foundry.paradigm.xyz | bash && foundryup`
 
 ### Install dependencies
 ```bash
