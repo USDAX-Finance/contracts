@@ -22,6 +22,7 @@ contract USDAxSavings is ReentrancyGuard, Ownable {
     // ─── Constants ────────────────────────────────────────────────────────────
     uint256 public constant BASIS_POINTS = 10_000;
     uint256 public constant YEAR         = 365 days;
+    uint256 private constant INDEX_SCALE = 1e27;
 
     // ─── State ────────────────────────────────────────────────────────────────
     IERC20 public immutable usdax;
@@ -37,6 +38,12 @@ contract USDAxSavings is ReentrancyGuard, Ownable {
     }
 
     mapping(address => Position) public positions;
+
+    /// @notice Reward per unit of principal accrued since deployment (INDEX_SCALE = 100%),
+    ///         advanced at the APY in force for each period so an APY change is never retroactive.
+    uint256 public rewardIndex;
+    uint256 public lastAccrual;
+    mapping(address => uint256) public rewardIndexPaid;
 
     // Enumeration
     address[] private _depositors;
@@ -55,6 +62,7 @@ contract USDAxSavings is ReentrancyGuard, Ownable {
         require(_apyBps <= 5_000,      "APY > 50%"); // sanity cap
         usdax   = IERC20(_usdax);
         apyBps  = _apyBps;
+        lastAccrual = block.timestamp;
     }
 
     // ─── View ─────────────────────────────────────────────────────────────────
@@ -62,11 +70,7 @@ contract USDAxSavings is ReentrancyGuard, Ownable {
     /// @notice USDAX rewards accrued but not yet claimed by `user`.
     function pendingRewards(address user) public view returns (uint256) {
         Position storage p = positions[user];
-        if (p.principal == 0) return p.accrued;
-
-        uint256 elapsed = block.timestamp - p.checkpoint;
-        uint256 earned  = p.principal * apyBps * elapsed / (BASIS_POINTS * YEAR);
-        return p.accrued + earned;
+        return p.accrued + p.principal * (_currentIndex() - rewardIndexPaid[user]) / INDEX_SCALE;
     }
 
     /// @notice Number of unique depositors.
@@ -142,20 +146,30 @@ contract USDAxSavings is ReentrancyGuard, Ownable {
     /// @param newApyBps New APY in basis points. Max 5000 (50%).
     function setApy(uint256 newApyBps) external onlyOwner {
         require(newApyBps <= 5_000, "APY > 50%");
+        _accrue();
         emit ApyUpdated(apyBps, newApyBps);
         apyBps = newApyBps;
     }
 
     // ─── Internal ─────────────────────────────────────────────────────────────
 
+    /// @dev Reward index as of now: the stored index plus the current APY since the last accrual.
+    function _currentIndex() internal view returns (uint256) {
+        return rewardIndex + apyBps * (block.timestamp - lastAccrual) * INDEX_SCALE / (BASIS_POINTS * YEAR);
+    }
+
+    /// @dev Bring the reward index up to now at the APY in force since the last accrual.
+    function _accrue() internal {
+        rewardIndex = _currentIndex();
+        lastAccrual = block.timestamp;
+    }
+
     /// @dev Snapshot accrued rewards into `accrued` and reset checkpoint.
     function _settle(address user) internal {
+        _accrue();
         Position storage p = positions[user];
-        if (p.principal > 0) {
-            uint256 elapsed = block.timestamp - p.checkpoint;
-            uint256 earned  = p.principal * apyBps * elapsed / (BASIS_POINTS * YEAR);
-            p.accrued += earned;
-        }
+        p.accrued += p.principal * (rewardIndex - rewardIndexPaid[user]) / INDEX_SCALE;
+        rewardIndexPaid[user] = rewardIndex;
         p.checkpoint = block.timestamp;
     }
 }
